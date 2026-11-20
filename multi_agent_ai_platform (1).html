@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="id" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Multi-Agent Hub - Google Account & Fusion AI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0b0f17',
+                        cardbg: '#161e2e',
+                        bordercolor: '#2a364f'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Identity Services (Official OAuth Library) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b0f17;
+            color: #f3f4f6;
+        }
+        pre code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a364f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0284c7;
+        }
+        .prose pre {
+            background-color: #0d131f !important;
+            border: 1px solid #2a364f;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            overflow-x: auto;
+        }
+        .thinking-box {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8));
+            border-left: 3px solid #8b5cf6;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden text-slate-200">
+
+    <!-- ========================================================================= -->
+    <!-- 1. PORTAL LOGIN AKUN GOOGLE (GATEKEEPER SCREEN)                           -->
+    <!-- ========================================================================= -->
+    <div id="auth-gate-screen" class="fixed inset-0 z-50 bg-[#070a10] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-32 -left-32 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="relative w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-7 sm:p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-purple-600 p-0.5 shadow-xl shadow-cyan-500/20">
+                    <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                        <i data-lucide="cpu" class="w-7 h-7 text-cyan-400"></i>
+                    </div>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Nexus Multi-Agent Hub</h1>
+                <p class="text-xs sm:text-sm text-slate-400">
+                    Login dengan Akun Google untuk menyatukan <span class="text-blue-400 font-semibold">Gemini 4</span>, <span class="text-purple-400 font-semibold">DeepSeek-V4</span>, & <span class="text-emerald-400 font-semibold">GLM-5.3</span> tanpa perlu API Key manual.
+                </p>
+            </div>
+
+            <!-- Google OAuth Client ID Optional Config -->
+            <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 space-y-2.5 text-xs">
+                <div class="flex items-center justify-between">
+                    <span class="font-semibold text-slate-300 flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Akses Sesi Browser & Google
+                    </span>
+                    <button type="button" onclick="toggleOAuthConfig()" class="text-[11px] text-cyan-400 hover:underline">
+                        OAuth Client ID (Opsional)
+                    </button>
+                </div>
+                <div id="oauth-client-box" class="hidden space-y-2 pt-2 border-t border-slate-800">
+                    <label class="block text-[11px] text-slate-400">Google OAuth 2.0 Client ID (Tipe: Web Application)</label>
+                    <input type="text" id="input-google-client-id" value="863033812676-19icjksl56dp8skj4mji37qr4f9cl8oj.apps.googleusercontent.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500">
+                    <div class="p-2 rounded-lg bg-amber-950/40 border border-amber-800/50 text-[10px] text-amber-300 space-y-1">
+                        <div>Jika muncul <strong>Error 401: invalid_client</strong>, pastikan Client ID di atas bertipe <strong>Web application</strong> dan daftarkan Origin ini di Google Cloud Console:</div>
+                        <div id="current-origin-display" class="font-mono text-cyan-300 select-all bg-slate-950 px-2 py-1 rounded"></div>
+                    </div>
+                    <div id="g_id_onload_container"></div>
+                </div>
+            </div>
+
+            <!-- Google Sign-In Button -->
+            <div class="space-y-3">
+                <div id="google-gsi-btn-wrapper" class="w-full flex justify-center"></div>
+                <button type="button" onclick="handleGoogleLogin(true)" class="w-full py-3.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm flex items-center justify-center gap-3 shadow-lg transition-all active:scale-[0.98]">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                    </svg>
+                    <span>Masuk dengan Google OAuth</span>
+                </button>
+
+                <button type="button" onclick="handleGoogleLogin(false)" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 font-semibold text-xs flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="zap" class="w-4 h-4 text-cyan-400"></i>
+                    <span>Masuk Langsung (Bypass OAuth / Sesi Lokal)</span>
+                </button>
+
+                <!-- Quick Custom Profile Form -->
+                <div class="pt-1 space-y-2">
+                    <div class="relative flex py-1 items-center">
+                        <div class="flex-grow border-t border-slate-800"></div>
+                        <span class="flex-shrink mx-3 text-[10px] uppercase tracking-wider text-slate-500">Identitas Sesi Browser</span>
+                        <div class="flex-grow border-t border-slate-800"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" id="login-user-name" placeholder="Nama Profil Anda" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+                        <input type="email" id="login-user-email" placeholder="akun@gmail.com" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-[11px] text-slate-500">
+                Mode Tanpa API Key Aktif Otomatis • Serverless GitHub Pages Ready
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 2. MAIN WORKSPACE (TERBUKA SETELAH LOGIN GOOGLE)                          -->
+    <!-- ========================================================================= -->
+    <div id="main-app-workspace" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+
+        <!-- TOP NAVIGATION BAR -->
+        <header class="h-16 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 flex items-center justify-between z-20 shrink-0">
+            <div class="flex items-center gap-3">
+                <button id="toggle-sidebar" onclick="toggleSidebar()" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+                        <i data-lucide="cpu" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-base leading-none text-slate-100 flex items-center gap-2">
+                            Nexus Multi-Browser Relay
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/50 font-medium">Web UI Relay</span>
+                        </h1>
+                        <p class="text-xs text-slate-400">Estafet Gemini Web • DeepSeek Web • GLM Web</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode Selector Center Tabs -->
+            <div class="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button id="mode-relay-btn" onclick="switchMode('relay')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-cyan-600 text-white shadow">
+                    <i data-lucide="app-window" class="w-3.5 h-3.5"></i> Multi-Browser Relay
+                </button>
+                <button id="mode-pipeline-btn" onclick="switchMode('pipeline')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1.5 transition">
+                    <i data-lucide="workflow" class="w-3.5 h-3.5"></i> Auto Simulasi
+                </button>
+                <button id="mode-arena-btn" onclick="switchMode('arena')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1.5 transition">
+                    <i data-lucide="columns-3" class="w-3.5 h-3.5"></i> Arena 3 Kolom
+                </button>
+            </div>
+
+            <!-- Right Tools & Bridge Settings Button -->
+            <div class="flex items-center gap-2">
+                <button onclick="openUserscriptModal()" class="px-2.5 py-1.5 rounded-lg border border-amber-700/60 bg-amber-950/40 text-amber-300 text-xs font-medium flex items-center gap-1.5 hover:bg-amber-900/40 transition" title="Pasang Auto-Paste & Auto-Send di Browser">
+                    <i data-lucide="puzzle" class="w-4 h-4 text-amber-400"></i>
+                    <span class="hidden sm:inline">Auto-Inject Script</span>
+                </button>
+
+                <button onclick="openConfigModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition shadow-sm">
+                    <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
+                    <span class="hidden sm:inline">URL Web UI</span>
+                    <span id="gateway-indicator" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN WORKPER -->
+        <div class="flex flex-1 overflow-hidden relative">
+
+            <!-- LEFT SIDEBAR -->
+            <aside id="sidebar" class="w-72 bg-slate-900/60 border-r border-slate-800/80 flex flex-col shrink-0 transition-all duration-300 z-10">
+                <div class="p-3 border-b border-slate-800/80 flex gap-2">
+                    <button onclick="createNewChat()" class="flex-1 py-2 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition shadow-md">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Sesi Fusion Baru
+                    </button>
+                </div>
+
+                <!-- Active Persona Preset Selector -->
+                <div class="p-3 border-b border-slate-800/60 bg-slate-950/40">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5 flex justify-between items-center">
+                        <span>Peran Tim AI</span>
+                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    </label>
+                    <select id="persona-select" onchange="changePersona(this.value)" class="w-full bg-slate-900 border border-slate-700 text-xs rounded-lg p-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-medium">
+                        <option value="founder">🚀 Full-Stack Founder (Teknis + Bisnis)</option>
+                        <option value="developer">👨‍💻 Developer & Engineer (Kode & Architecture)</option>
+                        <option value="business">💼 Pemilik Bisnis & Strategis (ROI & GTM)</option>
+                        <option value="custom">🛠 Custom Prompt System</option>
+                    </select>
+                </div>
+
+                <!-- Gabungkan Agent Squad Selector -->
+                <div class="p-3 border-b border-slate-800/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Gabungkan Agent</span>
+                        <span class="text-[10px] text-cyan-400 font-semibold" id="active-agent-count">3/3 Terhubung</span>
+                    </div>
+                    <div class="space-y-1.5 text-xs">
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-blue-500/40 transition">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="chk-gemini" checked onchange="toggleSquadAgent('gemini-4-hydrogen', this.checked)" class="accent-blue-500 rounded cursor-pointer">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                <span class="font-medium text-slate-300">1. Gemini Web UI</span>
+                            </div>
+                            <span class="text-[10px] text-blue-400 bg-blue-950 px-1.5 py-0.5 rounded border border-blue-800">Agent 1</span>
+                        </label>
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-purple-500/40 transition">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="chk-deepseek" checked onchange="toggleSquadAgent('deepseek-v4-pro', this.checked)" class="accent-purple-500 rounded cursor-pointer">
+                                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                <span class="font-medium text-slate-300">2. DeepSeek Web UI</span>
+                            </div>
+                            <span class="text-[10px] text-purple-400 bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800">Agent 2</span>
+                        </label>
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-emerald-500/40 transition">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="chk-glm" checked onchange="toggleSquadAgent('glm-5.3-flash', this.checked)" class="accent-emerald-500 rounded cursor-pointer">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span class="font-medium text-slate-300">3. GLM Web UI</span>
+                            </div>
+                            <span class="text-[10px] text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">Agent 3</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Chat History List -->
+                <div class="flex-1 overflow-y-auto p-2 space-y-1" id="chat-history-list"></div>
+
+                <!-- Logged-In Google Account Profile Card -->
+                <div class="p-3 border-t border-slate-800 bg-slate-950/80 space-y-2.5">
+                    <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div id="user-avatar-badge" class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                                G
+                            </div>
+                            <div class="min-w-0">
+                                <div id="sidebar-user-name" class="text-xs font-bold text-slate-200 truncate">Google User</div>
+                                <div id="sidebar-user-email" class="text-[10px] text-slate-400 truncate">user@gmail.com</div>
+                            </div>
+                        </div>
+                        <button onclick="handleGoogleLogout()" class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition" title="Keluar Akun Google">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <div class="text-[11px] text-slate-400 flex items-center justify-between px-1">
+                        <span class="flex items-center gap-1.5 text-emerald-400">
+                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Tanpa API Key
+                        </span>
+                        <button onclick="openClearConfirmModal()" class="hover:text-red-400 transition flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- CENTER CONTENT AREA -->
+            <main class="flex-1 flex flex-col bg-darkbg relative overflow-hidden">
+
+                <!-- MODE 0: MULTI-BROWSER WEB UI RELAY (DEFAULT ACTIVE) -->
+                <div id="view-relay" class="flex-1 flex flex-col h-full overflow-hidden">
+                    <div class="p-3 bg-slate-900/40 border-b border-slate-800/60 text-xs font-semibold text-slate-300 flex flex-wrap justify-between items-center gap-2 px-6">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="app-window" class="w-4 h-4 text-cyan-400"></i> Multi-Browser Web UI Relay (Estafet Antar Jendela AI Asli)
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openAllWebUIs()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-cyan-300 flex items-center gap-1 transition">
+                                <i data-lucide="external-link" class="w-3 h-3"></i> Buka 3 Window Web UI
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 max-w-5xl mx-auto w-full" id="relay-workspace-container">
+                        <div class="p-6 text-center text-slate-400 bg-gradient-to-b from-slate-900/80 to-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                            <div class="w-12 h-12 mx-auto rounded-2xl bg-cyan-950 border border-cyan-800/50 flex items-center justify-center">
+                                <i data-lucide="repeat" class="w-6 h-6 text-cyan-400"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-slate-100">Orkestrasi Estafet Multi-Browser (Tanpa API Key)</h3>
+                            <p class="text-xs text-slate-400 max-w-xl mx-auto leading-relaxed">
+                                Masukkan perintah di bawah. Sistem akan membukakan window <strong class="text-blue-400">gemini.google.com</strong> (Agent 1) beserta prompt terstruktur yang sudah otomatis disalin ke clipboard. Setelah Agent 1 selesai, tempel hasilnya di sini untuk otomatis dilempar ke <strong class="text-purple-400">chat.deepseek.com</strong> (Agent 2), lalu ke <strong class="text-emerald-400">chatglm.cn</strong> (Agent 3).
+                            </p>
+                            <div class="flex flex-wrap justify-center gap-2 pt-2">
+                                <button onclick="setInputPrompt('Buatkan arsitektur sistem SaaS AI lengkap beserta skema database dan rencana monetisasinya.')" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-xs text-cyan-300 transition">
+                                    ✨ Contoh Prompt Estafet SaaS
+                                </button>
+                                <button onclick="openUserscriptModal()" class="px-3 py-2 rounded-xl bg-amber-950/40 border border-amber-700/50 hover:border-amber-500 text-xs text-amber-300 transition">
+                                    ⚡ Aktifkan Auto-Fill & Auto-Enter di Browser
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODE 1: SATUKAN AGENT (AUTO SIMULATION / API PIPELINE) -->
+                <div id="view-pipeline" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+                    <div class="p-3 bg-slate-900/40 border-b border-slate-800/60 text-xs font-semibold text-slate-300 flex justify-between items-center px-6">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="git-merge" class="w-4 h-4 text-cyan-400"></i> Auto Pipeline: Simulasi & API Berantai
+                        </span>
+                        <span class="text-cyan-400 font-medium text-[11px]" id="fusion-squad-label">Tim Aktif: Gemini 4 + DeepSeek-V4 + GLM-5.3</span>
+                    </div>
+
+                    <div class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 max-w-4xl mx-auto w-full" id="pipeline-steps-container">
+                        <div class="p-6 text-center text-slate-400 bg-gradient-to-b from-slate-900/80 to-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                            <div class="w-12 h-12 mx-auto rounded-2xl bg-cyan-950 border border-cyan-800/50 flex items-center justify-center">
+                                <i data-lucide="layers" class="w-6 h-6 text-cyan-400"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-slate-100">Satukan Beberapa Agent AI dalam Satu Alur</h3>
+                            <p class="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+                                Cukup kirim 1 perintah di bawah. Sistem akan menyatukan agent yang dicentang di panel kiri: <strong class="text-blue-400">Gemini</strong> menyusun kerangka & kode, <strong class="text-purple-400">DeepSeek</strong> mengaudit logika & risiko, lalu <strong class="text-emerald-400">GLM-5.3</strong> merangkum strategi eksekusi final.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-left max-w-xl mx-auto">
+                                <button onclick="setInputPrompt('Buatkan blueprint aplikasi SaaS AI lengkap dari arsitektur backend, audit keamanan, hingga strategi monetisasi B2B.')" class="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition text-xs space-y-1">
+                                    <div class="font-bold text-cyan-400">🚀 Blueprint SaaS End-to-End</div>
+                                    <div class="text-[11px] text-slate-400">Gabungan Arsitektur + Audit + Bisnis</div>
+                                </button>
+                                <button onclick="setInputPrompt('Rancang sistem otomasi workflow multi-agent untuk tim developer dan hitung efisiensi biaya operasionalnya.')" class="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition text-xs space-y-1">
+                                    <div class="font-bold text-emerald-400">⚡ Otomasi Workflow & ROI</div>
+                                    <div class="text-[11px] text-slate-400">Eksekusi Teknis + Analisis Profit</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODE 2: ARENA (3-COLUMN COMPARISON) -->
+                <div id="view-arena" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+                    <div class="p-3 bg-slate-900/40 border-b border-slate-800/60 text-xs font-semibold text-slate-300 flex justify-between items-center px-6">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="swords" class="w-4 h-4 text-cyan-400"></i> Mode Arena: Lihat Jawaban 3 Model Berdampingan
+                        </span>
+                        <span class="text-slate-400 font-normal text-[11px]">Gemini 4 Hydrogen vs DeepSeek-V4-Pro vs GLM-5.3-Flash</span>
+                    </div>
+                    
+                    <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-3 p-3 overflow-y-auto">
+                        <div class="flex flex-col bg-slate-900/60 rounded-xl border border-slate-800 overflow-hidden">
+                            <div class="p-2.5 bg-blue-950/40 border-b border-blue-900/40 flex items-center justify-between">
+                                <span class="font-bold text-xs text-blue-400 flex items-center gap-1.5">
+                                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Gemini 4 Hydrogen
+                                </span>
+                                <span class="text-[10px] text-blue-300 bg-blue-900/50 px-2 py-0.5 rounded">Engineering</span>
+                            </div>
+                            <div id="arena-col-gemini" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs">
+                                <div class="text-slate-500 text-center italic py-8">Menunggu prompt...</div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col bg-slate-900/60 rounded-xl border border-slate-800 overflow-hidden">
+                            <div class="p-2.5 bg-purple-950/40 border-b border-purple-900/40 flex items-center justify-between">
+                                <span class="font-bold text-xs text-purple-400 flex items-center gap-1.5">
+                                    <i data-lucide="brain" class="w-3.5 h-3.5"></i> DeepSeek-V4-Pro
+                                </span>
+                                <span class="text-[10px] text-purple-300 bg-purple-900/50 px-2 py-0.5 rounded">Deep Reasoning</span>
+                            </div>
+                            <div id="arena-col-deepseek" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs">
+                                <div class="text-slate-500 text-center italic py-8">Menunggu prompt...</div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col bg-slate-900/60 rounded-xl border border-slate-800 overflow-hidden">
+                            <div class="p-2.5 bg-emerald-950/40 border-b border-emerald-900/40 flex items-center justify-between">
+                                <span class="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
+                                    <i data-lucide="briefcase" class="w-3.5 h-3.5"></i> GLM-5.3-Flash
+                                </span>
+                                <span class="text-[10px] text-emerald-300 bg-emerald-900/50 px-2 py-0.5 rounded">Business Strategy</span>
+                            </div>
+                            <div id="arena-col-glm" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs">
+                                <div class="text-slate-500 text-center italic py-8">Menunggu prompt...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- INPUT CONTROLLER BAR -->
+                <div class="p-3 sm:p-4 bg-slate-900/80 border-t border-slate-800/80 shrink-0">
+                    <form id="chat-form" onsubmit="handleChatSubmit(event)" class="max-w-4xl mx-auto flex flex-col gap-2">
+                        <div class="relative flex items-center bg-slate-950 rounded-2xl border border-slate-700 focus-within:border-cyan-500 shadow-xl overflow-hidden">
+                            <textarea id="user-input" rows="2" placeholder="Kirim tugas ke Multi-Browser Relay (Agent 1 -> Agent 2 -> Agent 3)..." class="w-full bg-transparent px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none font-sans" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); handleChatSubmit(event); }"></textarea>
+
+                            <div class="pr-3 flex items-center gap-2">
+                                <button type="submit" id="send-btn" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white flex items-center justify-center transition shadow-lg shadow-cyan-600/30">
+                                    <i data-lucide="send" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-[11px] text-slate-400 px-2">
+                            <span id="relay-toast-status" class="text-cyan-400 font-medium">Siap menjalankan estafet lintas browser Web UI</span>
+                            <span id="gateway-mode-label" class="text-emerald-400 flex items-center gap-1 font-medium"><i data-lucide="shield-check" class="w-3 h-3"></i> Mode: Multi-Browser Web UI (No API Key)</span>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 3. MODAL USERSCRIPT AUTO-INJECT (TAMPERMONKEY / EXTENSION BRIDGE)         -->
+    <!-- ========================================================================= -->
+    <div id="userscript-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="puzzle" class="w-5 h-5 text-amber-400"></i>
+                    <h3 class="font-bold text-slate-100 text-sm">Tampermonkey Auto-Inject Script (Auto-Paste & Auto-Send)</h3>
+                </div>
+                <button onclick="closeUserscriptModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-300">
+                <p class="leading-relaxed text-slate-300">
+                    Karena keamanan browser melarang website mengisi kolom chat tab lain secara langsung, pasang script ringan ini di ekstensi <strong>Tampermonkey</strong> (Chrome/Edge/Brave). Setiap kali hub ini membuka tab <strong>Gemini</strong>, <strong>DeepSeek</strong>, atau <strong>GLM</strong> dengan parameter <code>#nexus_prompt=...</code>, script ini otomatis mengetikkan prompt-nya dan menekan tombol kirim untukmu!
+                </p>
+                <div class="relative">
+                    <pre id="tampermonkey-code-block" class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-emerald-300 overflow-x-auto leading-relaxed">// ==UserScript==
+// @name         Nexus Multi-Browser AI Auto-Relay Injector
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Otomatis isi & kirim prompt estafet dari Nexus Multi-Agent Hub
+// @match        https://gemini.google.com/*
+// @match        https://chat.deepseek.com/*
+// @match        https://chatglm.cn/*
+// @match        https://z.ai/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    const hash = window.location.hash;
+    if (!hash.includes('nexus_prompt=')) return;
+    const rawPrompt = decodeURIComponent(hash.split('nexus_prompt=')[1].split('&')[0]);
+    if (!rawPrompt) return;
+
+    const tryInject = setInterval(() => {
+        const editor = document.querySelector('div[contenteditable="true"], textarea');
+        if (editor) {
+            clearInterval(tryInject);
+            editor.focus();
+            if (editor.tagName === 'TEXTAREA') {
+                const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                nativeSetter.call(editor, rawPrompt);
+                editor.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                editor.innerText = rawPrompt;
+                editor.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            setTimeout(() => {
+                const sendBtn = document.querySelector('button[aria-label*="Send"], button[aria-label*="Kirim"], button[type="submit"]');
+                if (sendBtn && !sendBtn.disabled) sendBtn.click();
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }, 900);
+        }
+    }, 800);
+})();</pre>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end gap-2">
+                <button onclick="copyUserscriptCode()" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition flex items-center gap-1.5">
+                    <i data-lucide="copy" class="w-4 h-4"></i> Salin Script Tampermonkey
+                </button>
+                <button onclick="closeUserscriptModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 4. MODAL PENGATURAN URL WEB UI & PROXY BRIDGE                             -->
+    <!-- ========================================================================= -->
+    <div id="config-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-5 h-5 text-cyan-400"></i>
+                    <h3 class="font-bold text-slate-100 text-sm">Konfigurasi URL Web UI Chat & Bridge</h3>
+                </div>
+                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-300">
+                <div class="space-y-3 p-4 bg-slate-950/60 rounded-xl border border-slate-800">
+                    <div class="font-bold text-cyan-400">Target URL Web UI Browser (Akun Login Kamu)</div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-slate-400 mb-1">Agent 1 • Google Gemini Web UI</label>
+                        <input type="text" id="cfg-url-gemini" value="https://gemini.google.com/app" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-slate-400 mb-1">Agent 2 • DeepSeek Chat Web UI</label>
+                        <input type="text" id="cfg-url-deepseek" value="https://chat.deepseek.com/" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-slate-400 mb-1">Agent 3 • Zhipu GLM Web UI (ChatGLM / Z.ai)</label>
+                        <input type="text" id="cfg-url-glm" value="https://chatglm.cn/main/alltoolsdetail" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono">
+                    </div>
+                </div>
+
+                <!-- System Prompt -->
+                <div class="space-y-1.5">
+                    <label class="font-bold text-slate-200 block">System Instruction Tim AI</label>
+                    <textarea id="cfg-system-prompt" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none text-xs"></textarea>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end gap-2">
+                <button onclick="closeConfigModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">Batal</button>
+                <button onclick="saveConfigurations()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition">Simpan URL & Pengaturan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM CONFIRMATION MODAL -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div class="flex items-center gap-2.5 text-red-400">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                <h3 class="font-bold text-sm text-slate-100">Reset Semua Data Sesi?</h3>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+                Seluruh riwayat obrolan yang tersimpan di browser ini akan dihapus.
+            </p>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeClearConfirmModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">Batal</button>
+                <button onclick="executeClearAllHistory()" class="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        const PERSONA_PRESETS = {
+            founder: "Anda adalah Full-Stack Founder berpengalaman yang menyatukan kecepatan pengembangan aplikasi (MVP), kualitas arsitektur kode, dan strategi monetisasi bisnis.",
+            developer: "Anda adalah Senior Principal Engineer & System Architect. Berikan solusi teknis yang scalable, clean code, modular, lengkap dengan contoh kode runnable dan penanganan error.",
+            business: "Anda adalah Business Strategist & Product Manager. Analisis ide dari sisi ROI, Unit Economics, Go-To-Market (GTM), dan susun ringkasan eksekutif yang tajam.",
+            custom: "Anda adalah asisten multi-agent AI yang membantu menyelesaikan tugas teknis dan strategis."
+        };
+
+        let state = {
+            activeMode: 'relay', // 'relay' (Multi-Browser Estafet) | 'pipeline' | 'arena'
+            activeModel: 'gemini-4-hydrogen',
+            activePersona: 'founder',
+            thinkingMode: true,
+            connectionStrategy: 'session',
+            bridgeUrl: '',
+            webUrls: {
+                gemini: 'https://gemini.google.com/app',
+                deepseek: 'https://chat.deepseek.com/',
+                glm: 'https://chatglm.cn/main/alltoolsdetail'
+            },
+            apiKeys: { gemini: '', deepseek: '', glm: '' },
+            systemPrompt: PERSONA_PRESETS.founder,
+            chatHistory: [],
+            currentChatId: null,
+            googleUser: null,
+            googleClientId: '863033812676-19icjksl56dp8skj4mji37qr4f9cl8oj.apps.googleusercontent.com',
+            squadAgents: ['gemini-4-hydrogen', 'deepseek-v4-pro', 'glm-5.3-flash'],
+            relaySession: null
+        };
+
+        // STORAGE & STATE MANAGEMENT HELPERS
+        function saveStateToStorage() {
+            try {
+                const toSave = {
+                    activeMode: state.activeMode,
+                    activeModel: state.activeModel,
+                    activePersona: state.activePersona,
+                    thinkingMode: state.thinkingMode,
+                    connectionStrategy: state.connectionStrategy,
+                    bridgeUrl: state.bridgeUrl,
+                    webUrls: state.webUrls,
+                    apiKeys: state.apiKeys,
+                    systemPrompt: state.systemPrompt,
+                    chatHistory: state.chatHistory,
+                    currentChatId: state.currentChatId,
+                    googleUser: state.googleUser,
+                    googleClientId: state.googleClientId,
+                    squadAgents: state.squadAgents
+                };
+                localStorage.setItem('nexus_multi_agent_state_v3', JSON.stringify(toSave));
+            } catch (err) {
+                console.warn('Gagal menyimpan state ke localStorage:', err);
+            }
+        }
+
+        function loadStateFromStorage() {
+            try {
+                const raw = localStorage.getItem('nexus_multi_agent_state_v3');
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                Object.assign(state, parsed);
+            } catch (err) {
+                console.warn('Gagal memuat state dari localStorage:', err);
+            }
+        }
+
+        function updateUIState() {
+            const personaEl = document.getElementById('persona-select');
+            if (personaEl) personaEl.value = state.activePersona || 'founder';
+
+            const chkGemini = document.getElementById('chk-gemini');
+            const chkDeepseek = document.getElementById('chk-deepseek');
+            const chkGlm = document.getElementById('chk-glm');
+            if (chkGemini) chkGemini.checked = state.squadAgents.includes('gemini-4-hydrogen');
+            if (chkDeepseek) chkDeepseek.checked = state.squadAgents.includes('deepseek-v4-pro');
+            if (chkGlm) chkGlm.checked = state.squadAgents.includes('glm-5.3-flash');
+
+            updateSquadLabels();
+            switchMode(state.activeMode || 'relay');
+        }
+
+        function createNewChat() {
+            state.currentChatId = Date.now().toString();
+            state.relaySession = null;
+
+            const relayContainer = document.getElementById('relay-workspace-container');
+            if (relayContainer) {
+                relayContainer.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 bg-gradient-to-b from-slate-900/80 to-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                        <div class="w-12 h-12 mx-auto rounded-2xl bg-cyan-950 border border-cyan-800/50 flex items-center justify-center">
+                            <i data-lucide="repeat" class="w-6 h-6 text-cyan-400"></i>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-100">Orkestrasi Estafet Multi-Browser (Tanpa API Key)</h3>
+                        <p class="text-xs text-slate-400 max-w-xl mx-auto leading-relaxed">
+                            Masukkan perintah di bawah. Sistem akan membukakan window <strong class="text-blue-400">gemini.google.com</strong> (Agent 1) beserta prompt terstruktur yang sudah otomatis disalin ke clipboard. Setelah Agent 1 selesai, tempel hasilnya di sini untuk otomatis dilempar ke <strong class="text-purple-400">chat.deepseek.com</strong> (Agent 2), lalu ke <strong class="text-emerald-400">chatglm.cn</strong> (Agent 3).
+                        </p>
+                        <div class="flex flex-wrap justify-center gap-2 pt-2">
+                            <button onclick="setInputPrompt('Buatkan arsitektur sistem SaaS AI lengkap beserta skema database dan rencana monetisasinya.')" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-xs text-cyan-300 transition">
+                                ✨ Contoh Prompt Estafet SaaS
+                            </button>
+                            <button onclick="openUserscriptModal()" class="px-3 py-2 rounded-xl bg-amber-950/40 border border-amber-700/50 hover:border-amber-500 text-xs text-amber-300 transition">
+                                ⚡ Aktifkan Auto-Fill & Auto-Enter di Browser
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const pipelineContainer = document.getElementById('pipeline-steps-container');
+            if (pipelineContainer) {
+                pipelineContainer.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 bg-gradient-to-b from-slate-900/80 to-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                        <div class="w-12 h-12 mx-auto rounded-2xl bg-cyan-950 border border-cyan-800/50 flex items-center justify-center">
+                            <i data-lucide="layers" class="w-6 h-6 text-cyan-400"></i>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-100">Satukan Beberapa Agent AI dalam Satu Alur</h3>
+                        <p class="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+                            Cukup kirim 1 perintah di bawah. Sistem akan menyatukan agent yang dicentang di panel kiri untuk bekerja secara berurutan.
+                        </p>
+                    </div>
+                `;
+            }
+
+            if (window.lucide) lucide.createIcons();
+            saveStateToStorage();
+        }
+
+        function saveToHistory(prompt) {
+            const id = state.currentChatId || Date.now().toString();
+            state.currentChatId = id;
+            const existing = state.chatHistory.find(item => item.id === id);
+            if (!existing) {
+                state.chatHistory.unshift({
+                    id,
+                    title: prompt.length > 36 ? prompt.slice(0, 36) + '...' : prompt,
+                    prompt,
+                    mode: state.activeMode,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+            }
+            saveStateToStorage();
+            renderChatHistoryList();
+        }
+
+        function renderChatHistoryList() {
+            const listEl = document.getElementById('chat-history-list');
+            if (!listEl) return;
+
+            if (!state.chatHistory || state.chatHistory.length === 0) {
+                listEl.innerHTML = `<div class="text-center text-[11px] text-slate-500 py-6">Belum ada riwayat sesi</div>`;
+                return;
+            }
+
+            listEl.innerHTML = state.chatHistory.map(item => {
+                const isActive = item.id === state.currentChatId;
+                return `
+                    <div onclick="loadHistorySession('${item.id}')" class="group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-xs transition ${isActive ? 'bg-slate-800 text-cyan-300 font-semibold border border-slate-700' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}">
+                        <div class="truncate pr-2">
+                            <div class="truncate">${escapeHtml(item.title)}</div>
+                            <div class="text-[10px] text-slate-500">${item.mode.toUpperCase()} • ${item.timestamp || ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadHistorySession(id) {
+            const item = state.chatHistory.find(h => h.id === id);
+            if (!item) return;
+            state.currentChatId = item.id;
+            setInputPrompt(item.prompt);
+            renderChatHistoryList();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function setInputPrompt(text) {
+            const input = document.getElementById('user-input');
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
+        }
+
+        function initGoogleIdentityServices() {
+            const isEmbeddedFrame = window.self !== window.top;
+            if (isEmbeddedFrame || !window.google || !window.google.accounts || !window.google.accounts.id) return;
+            try {
+                google.accounts.id.initialize({
+                    client_id: state.googleClientId,
+                    use_fedcm_for_prompt: false,
+                    use_fedcm_for_button: false,
+                    callback: (response) => {
+                        if (response && response.credential) {
+                            try {
+                                const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                                state.googleUser = {
+                                    name: payload.name || 'Google User',
+                                    email: payload.email || 'user@gmail.com',
+                                    picture: payload.picture || ''
+                                };
+                                saveStateToStorage();
+                                checkAuthSession();
+                            } catch (e) {
+                                console.warn('Gagal parse credential JWT:', e);
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.warn('GSI init warning:', err);
+            }
+        }
+
+        function checkAuthSession() {
+            const gate = document.getElementById('auth-gate-screen');
+            const workspace = document.getElementById('main-app-workspace');
+            if (state.googleUser) {
+                if (gate) gate.classList.add('hidden');
+                if (workspace) workspace.classList.remove('hidden');
+
+                const nameEl = document.getElementById('sidebar-user-name');
+                const emailEl = document.getElementById('sidebar-user-email');
+                const avatarEl = document.getElementById('user-avatar-badge');
+                if (nameEl) nameEl.textContent = state.googleUser.name || 'Google User';
+                if (emailEl) emailEl.textContent = state.googleUser.email || 'user@gmail.com';
+                if (avatarEl) {
+                    if (state.googleUser.picture) {
+                        avatarEl.innerHTML = `<img src="${state.googleUser.picture}" alt="Avatar" class="w-full h-full rounded-full object-cover">`;
+                    } else {
+                        avatarEl.textContent = (state.googleUser.name || 'G').charAt(0).toUpperCase();
+                    }
+                }
+            } else {
+                if (gate) gate.classList.remove('hidden');
+                if (workspace) workspace.classList.add('hidden');
+            }
+        }
+
+        function handleGoogleLogout() {
+            state.googleUser = null;
+            saveStateToStorage();
+            checkAuthSession();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.classList.toggle('hidden');
+        }
+
+        function switchMode(mode) {
+            state.activeMode = mode;
+            const modes = ['relay', 'pipeline', 'arena'];
+            modes.forEach(m => {
+                const view = document.getElementById(`view-${m}`);
+                const btn = document.getElementById(`mode-${m}-btn`);
+                if (view) view.classList.toggle('hidden', m !== mode);
+                if (btn) {
+                    if (m === mode) {
+                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-cyan-600 text-white shadow';
+                    } else {
+                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1.5 transition';
+                    }
+                }
+            });
+            saveStateToStorage();
+        }
+
+        function changePersona(val) {
+            state.activePersona = val;
+            if (PERSONA_PRESETS[val]) {
+                state.systemPrompt = PERSONA_PRESETS[val];
+            }
+            saveStateToStorage();
+        }
+
+        function toggleSquadAgent(agentId, checked) {
+            if (checked) {
+                if (!state.squadAgents.includes(agentId)) state.squadAgents.push(agentId);
+            } else {
+                state.squadAgents = state.squadAgents.filter(a => a !== agentId);
+            }
+            updateSquadLabels();
+            saveStateToStorage();
+        }
+
+        function updateSquadLabels() {
+            const countEl = document.getElementById('active-agent-count');
+            if (countEl) countEl.textContent = `${state.squadAgents.length}/3 Terhubung`;
+        }
+
+        function openUserscriptModal() {
+            document.getElementById('userscript-modal')?.classList.remove('hidden');
+        }
+
+        function closeUserscriptModal() {
+            document.getElementById('userscript-modal')?.classList.add('hidden');
+        }
+
+        function copyUserscriptCode() {
+            const code = document.getElementById('tampermonkey-code-block')?.textContent || '';
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            const status = document.getElementById('relay-toast-status');
+            if (status) status.textContent = 'Script Tampermonkey berhasil disalin ke clipboard!';
+        }
+
+        function openConfigModal() {
+            document.getElementById('cfg-url-gemini').value = state.webUrls.gemini;
+            document.getElementById('cfg-url-deepseek').value = state.webUrls.deepseek;
+            document.getElementById('cfg-url-glm').value = state.webUrls.glm;
+            document.getElementById('cfg-system-prompt').value = state.systemPrompt;
+            document.getElementById('config-modal')?.classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal')?.classList.add('hidden');
+        }
+
+        function saveConfigurations() {
+            state.webUrls.gemini = document.getElementById('cfg-url-gemini').value.trim() || state.webUrls.gemini;
+            state.webUrls.deepseek = document.getElementById('cfg-url-deepseek').value.trim() || state.webUrls.deepseek;
+            state.webUrls.glm = document.getElementById('cfg-url-glm').value.trim() || state.webUrls.glm;
+            state.systemPrompt = document.getElementById('cfg-system-prompt').value.trim() || state.systemPrompt;
+            saveStateToStorage();
+            closeConfigModal();
+        }
+
+        function openClearConfirmModal() {
+            document.getElementById('confirm-modal')?.classList.remove('hidden');
+        }
+
+        function closeClearConfirmModal() {
+            document.getElementById('confirm-modal')?.classList.add('hidden');
+        }
+
+        function executeClearAllHistory() {
+            state.chatHistory = [];
+            createNewChat();
+            renderChatHistoryList();
+            closeClearConfirmModal();
+        }
+
+        function openAllWebUIs() {
+            window.open(state.webUrls.gemini, '_blank');
+            window.open(state.webUrls.deepseek, '_blank');
+            window.open(state.webUrls.glm, '_blank');
+        }
+
+        function copyToClipboard(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+
+        function launchRelayStep(stepIdx) {
+            if (!state.relaySession) return;
+            const steps = [
+                {
+                    key: 'gemini',
+                    name: 'Agent 1 • Gemini Web UI',
+                    url: state.webUrls.gemini,
+                    prompt: `[PERAN: ${state.systemPrompt}]\n\nTugas Utama:\n${state.relaySession.originalPrompt}\n\nSusun rancangan awal secara lengkap dan terstruktur.`
+                },
+                {
+                    key: 'deepseek',
+                    name: 'Agent 2 • DeepSeek Web UI',
+                    url: state.webUrls.deepseek,
+                    prompt: `Berikut adalah tugas awal:\n"${state.relaySession.originalPrompt}"\n\nDan ini hasil dari Agent 1 (Gemini):\n${state.relaySession.outputs.gemini}\n\nLakukan audit logika, keamanan, optimasi kode, dan analisis edge-case secara mendalam.`
+                },
+                {
+                    key: 'glm',
+                    name: 'Agent 3 • GLM Web UI',
+                    url: state.webUrls.glm,
+                    prompt: `Berikut adalah tugas awal:\n"${state.relaySession.originalPrompt}"\n\nHasil Agent 1:\n${state.relaySession.outputs.gemini}\n\nHasil Audit Agent 2:\n${state.relaySession.outputs.deepseek}\n\nSusun strategi bisnis final, analisis ROI, dan roadmap eksekusi yang siap dijalankan.`
+                }
+            ];
+
+            const current = steps[stepIdx];
+            if (!current) return;
+            copyToClipboard(current.prompt);
+            const targetUrl = `${current.url}#nexus_prompt=${encodeURIComponent(current.prompt)}`;
+            window.open(targetUrl, `nexus_${current.key}`, 'width=1100,height=800');
+            const status = document.getElementById('relay-toast-status');
+            if (status) status.textContent = `Prompt ${current.name} disalin ke clipboard & jendela browser dibuka!`;
+        }
+
+        function advanceRelayStep(stepIdx) {
+            if (!state.relaySession) return;
+            if (stepIdx === 0) {
+                const val = document.getElementById('relay-input-gemini')?.value.trim();
+                if (!val) return;
+                state.relaySession.outputs.gemini = val;
+                state.relaySession.step = 1;
+                renderRelayWorkspace();
+                launchRelayStep(1);
+            } else if (stepIdx === 1) {
+                const val = document.getElementById('relay-input-deepseek')?.value.trim();
+                if (!val) return;
+                state.relaySession.outputs.deepseek = val;
+                state.relaySession.step = 2;
+                renderRelayWorkspace();
+                launchRelayStep(2);
+            } else if (stepIdx === 2) {
+                const val = document.getElementById('relay-input-glm')?.value.trim();
+                if (!val) return;
+                state.relaySession.outputs.glm = val;
+                state.relaySession.step = 3;
+                renderRelayWorkspace();
+            }
+        }
+
+        function renderRelayWorkspace() {
+            const container = document.getElementById('relay-workspace-container');
+            if (!container || !state.relaySession) return;
+            const s = state.relaySession;
+
+            container.innerHTML = `
+                <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div class="text-[11px] font-bold uppercase text-cyan-400">Prompt Estafet Aktif</div>
+                    <div class="text-sm text-slate-100">${escapeHtml(s.originalPrompt)}</div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-900/90 border ${s.step === 0 ? 'border-blue-500' : 'border-slate-800'} space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-blue-400">1. Agent 1 • Google Gemini Web UI</span>
+                        <button onclick="launchRelayStep(0)" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold">Buka Window & Salin Prompt</button>
+                    </div>
+                    <textarea id="relay-input-gemini" rows="4" placeholder="Tempel (Paste) hasil jawaban dari jendela Gemini Web UI di sini..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500">${escapeHtml(s.outputs.gemini)}</textarea>
+                    <div class="flex justify-end">
+                        <button onclick="advanceRelayStep(0)" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">Simpan & Lempar ke Agent 2 (DeepSeek) →</button>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-900/90 border ${s.step === 1 ? 'border-purple-500' : 'border-slate-800'} space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-purple-400">2. Agent 2 • DeepSeek Chat Web UI</span>
+                        <button onclick="launchRelayStep(1)" class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold">Buka Window & Salin Prompt</button>
+                    </div>
+                    <textarea id="relay-input-deepseek" rows="4" placeholder="Tempel (Paste) hasil audit dari jendela DeepSeek Web UI di sini..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-purple-500">${escapeHtml(s.outputs.deepseek)}</textarea>
+                    <div class="flex justify-end">
+                        <button onclick="advanceRelayStep(1)" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold">Simpan & Lempar ke Agent 3 (GLM) →</button>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-900/90 border ${s.step >= 2 ? 'border-emerald-500' : 'border-slate-800'} space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-400">3. Agent 3 • Zhipu GLM Web UI (Final Synthesis)</span>
+                        <button onclick="launchRelayStep(2)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold">Buka Window & Salin Prompt</button>
+                    </div>
+                    <textarea id="relay-input-glm" rows="4" placeholder="Tempel (Paste) hasil sintesis akhir dari jendela GLM Web UI di sini..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">${escapeHtml(s.outputs.glm)}</textarea>
+                    <div class="flex justify-end">
+                        <button onclick="advanceRelayStep(2)" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">Selesaikan Sesi Estafet ✓</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateSimulatedOutput(modelKey, prompt) {
+            if (modelKey.includes('gemini')) {
+                return `### Rancangan Sistem & Arsitektur (Gemini 4 Hydrogen)\n\nUntuk permintaan **"${prompt}"**:\n- **Arsitektur Modular**: Pemisahan API Gateway, Worker Queue, dan Edge Cache.\n- **Kecepatan Eksekusi**: Latency sub-100ms menggunakan edge deployment.\n- **Langkah Implementasi**: Validasi skema data -> Integrasi endpoint -> Pengujian beban.`;
+            }
+            if (modelKey.includes('deepseek')) {
+                return `### Audit Logika & Optimasi (DeepSeek-V4-Pro)\n\n1. **Validasi Edge-Case**: Pastikan penanganan *rate-limit* dan *retry backoff* terpasang.\n2. **Keamanan Data**: Terapkan isolasi token sesi per pengguna.\n3. **Efisiensi**: Penggunaan caching konteks menekan biaya komputasi hingga 65%.`;
+            }
+            return `### Strategi Bisnis & Eksekusi (GLM-5.3-Flash)\n\n- **Target ROI**: Efisiensi operasional meningkat 3x lipat pada kuartal pertama.\n- **Model Monetisasi**: Freemium untuk penggunaan standar + Tier Pro untuk otomasi multi-agent.\n- **Roadmap**: Minggu 1-2 MVP, Minggu 3 Beta Testing, Minggu 4 Peluncuran Publik.`;
+        }
+
+        async function handleChatSubmit(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('user-input');
+            const prompt = input?.value.trim();
+            if (!prompt) return;
+
+            input.value = '';
+            saveToHistory(prompt);
+
+            if (state.activeMode === 'relay') {
+                state.relaySession = {
+                    originalPrompt: prompt,
+                    step: 0,
+                    outputs: { gemini: '', deepseek: '', glm: '' }
+                };
+                renderRelayWorkspace();
+                launchRelayStep(0);
+            } else if (state.activeMode === 'pipeline') {
+                const container = document.getElementById('pipeline-steps-container');
+                if (!container) return;
+                container.innerHTML = '';
+                const agents = [
+                    { key: 'gemini-4-hydrogen', label: 'Tahap 1 • Gemini 4 Hydrogen', color: 'text-blue-400' },
+                    { key: 'deepseek-v4-pro', label: 'Tahap 2 • DeepSeek-V4-Pro', color: 'text-purple-400' },
+                    { key: 'glm-5.3-flash', label: 'Tahap 3 • GLM-5.3-Flash', color: 'text-emerald-400' }
+                ];
+                for (const ag of agents) {
+                    const md = generateSimulatedOutput(ag.key, prompt);
+                    const html = window.marked ? marked.parse(md) : escapeHtml(md);
+                    container.innerHTML += `
+                        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                            <div class="text-xs font-bold ${ag.color}">${ag.label}</div>
+                            <div class="prose prose-invert max-w-none text-xs text-slate-300">${html}</div>
+                        </div>
+                    `;
+                }
+            } else if (state.activeMode === 'arena') {
+                const cols = [
+                    { id: 'arena-col-gemini', key: 'gemini-4-hydrogen' },
+                    { id: 'arena-col-deepseek', key: 'deepseek-v4-pro' },
+                    { id: 'arena-col-glm', key: 'glm-5.3-flash' }
+                ];
+                cols.forEach(col => {
+                    const el = document.getElementById(col.id);
+                    if (el) {
+                        const md = generateSimulatedOutput(col.key, prompt);
+                        el.innerHTML = `<div class="prose prose-invert max-w-none text-xs text-slate-300">${window.marked ? marked.parse(md) : escapeHtml(md)}</div>`;
+                    }
+                });
+            }
+        }
+
+        function toggleOAuthConfig() {
+            const box = document.getElementById('oauth-client-box');
+            if (box) box.classList.toggle('hidden');
+        }
+
+        function handleGoogleLogin(useOAuth = false) {
+            const clientIdInput = document.getElementById('input-google-client-id')?.value.trim();
+            if (clientIdInput) {
+                state.googleClientId = clientIdInput;
+            }
+
+            const customName = document.getElementById('login-user-name')?.value.trim();
+            const customEmail = document.getElementById('login-user-email')?.value.trim();
+            const isEmbeddedFrame = window.self !== window.top;
+
+            if (useOAuth && !isEmbeddedFrame && window.google && window.google.accounts && window.google.accounts.oauth2) {
+                try {
+                    const tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: state.googleClientId,
+                        scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+                        callback: async (tokenResponse) => {
+                            if (tokenResponse && tokenResponse.access_token) {
+                                try {
+                                    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                                        headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                                    });
+                                    const profile = await res.json();
+                                    state.googleUser = {
+                                        name: profile.name || customName || 'Google User',
+                                        email: profile.email || customEmail || 'user@gmail.com',
+                                        picture: profile.picture || ''
+                                    };
+                                    saveStateToStorage();
+                                    checkAuthSession();
+                                } catch (err) {
+                                    console.warn('Gagal mengambil profil Google, beralih ke sesi lokal:', err);
+                                    completeLocalLogin(customName, customEmail);
+                                }
+                            }
+                        }
+                    });
+                    tokenClient.requestAccessToken({ prompt: 'select_account' });
+                    return;
+                } catch (err) {
+                    console.warn('OAuth popup diblokir atau gagal, beralih ke sesi lokal:', err);
+                }
+            }
+
+            completeLocalLogin(customName, customEmail);
+        }
+
+        function completeLocalLogin(customName, customEmail) {
+            state.googleUser = {
+                name: customName || 'Google Session User',
+                email: customEmail || 'workspace@gmail.com',
+                picture: ''
+            };
+            saveStateToStorage();
+            checkAuthSession();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStateFromStorage();
+
+            const originDisplay = document.getElementById('current-origin-display');
+            if (originDisplay) {
+                originDisplay.textContent = window.location.origin;
+            }
+
+            const clientInput = document.getElementById('input-google-client-id');
+            if (clientInput && state.googleClientId) {
+                clientInput.value = state.googleClientId;
+            }
+
+            checkAuthSession();
+            updateUIState();
+            renderChatHistoryList();
+
+            if (!state.currentChatId) {
+                createNewChat();
+            }
+
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            setTimeout(() => {
+                initGoogleIdentityServices();
+            }, 600);
+        });
+    </script>
+</body>
+</html>
